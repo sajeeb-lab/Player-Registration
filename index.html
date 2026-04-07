@@ -1186,11 +1186,14 @@ let allTeams = [];
     const d = await r.json();
     allTeams = d.teams || [];
 
-    // Read team from ?team= query param (set by team.html) OR URL hash fallback
-    const params  = new URLSearchParams(window.location.search);
-    const qParam  = params.get('team');
-    const rawHash = window.location.hash.slice(1);
-    const slug    = qParam ? decodeURIComponent(qParam) : (rawHash ? decodeURIComponent(rawHash) : '');
+    // Read team from path (/team-name), ?team= query param, or URL hash (fallbacks)
+    const params    = new URLSearchParams(window.location.search);
+    const qParam    = params.get('team');
+    const rawHash   = window.location.hash.slice(1);
+    const pathSlug  = window.location.pathname.replace(/^\//, '').trim();
+    const slug      = pathSlug
+                        ? decodeURIComponent(pathSlug)
+                        : (qParam ? decodeURIComponent(qParam) : (rawHash ? decodeURIComponent(rawHash) : ''));
 
     if (slug) {
       const normalize = str => str.replace(/[-\s\/]+/g, '').toLowerCase();
