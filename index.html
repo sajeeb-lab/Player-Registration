@@ -658,12 +658,10 @@
   }
   .navbar-links a:hover { background: #0042ab; color: #ffffff; }
 
-  /* 16.1% column: Coach Login
-     padding-right:60px forces the button to be narrow,
-     producing the near-circular shape seen on the original site. */
+  /* 16.1% column: Coach Login */
   .navbar-cta-col {
     width: 16.1%;
-    padding: 10px 60px 10px 10px;
+    padding: 10px 30px 10px 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -675,15 +673,16 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    width: 100%;
+    width: 100px;
+    height: 100px;
     background: #0042ab;
     color: #ffffff !important;
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 600;
     text-decoration: none;
-    padding: 15px 10px;
-    border-radius: 50px;
+    padding: 10px;
+    border-radius: 50%;
     border: 2px solid #ffffff;
     box-shadow: 0 4px 12px rgba(0,66,171,.35);
     white-space: normal;
@@ -692,6 +691,7 @@
     text-transform: none;
     letter-spacing: 0;
     transition: background .2s;
+    flex-shrink: 0;
   }
   .navbar-cta:hover { background: #003090; }
 
