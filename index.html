@@ -27,8 +27,10 @@
     background: var(--light);
     color: var(--text);
     min-height: 100vh;
+  }
+
+  .page-wrap {
     padding: 2rem 1.2rem 4rem;
-    padding-top: 210px;
   }
 
   /* ── STEP INDICATOR ── */
@@ -444,7 +446,7 @@
     transition: background .2s, transform .15s, opacity .2s;
   }
   .btn:active { transform: scale(.98); }
-  .btn-primary { background: var(--red);  color: var(--white); }
+  .btn-primary { background: var(--red); color: var(--white); }
   .btn-primary:hover { background: var(--red2); }
   .btn-navy    { background: var(--navy); color: var(--white); }
   .btn-navy:hover { background: var(--navy2); }
@@ -545,7 +547,7 @@
   .page.active { display: block; }
 
   @media (max-width: 480px) {
-    body { padding: 1.2rem .8rem 3rem; padding-top: 170px; }
+    .page-wrap { padding: 1.2rem .8rem 3rem; }
     .card { padding: 1.2rem 1rem; }
     .step-label { display: none; }
   }
@@ -554,8 +556,7 @@
 
   /* ── NAVBAR ── */
   .navbar {
-    position: fixed;
-    top: 0; left: 0; right: 0;
+    position: relative;
     z-index: 1000;
     background: #ffffff;
     box-shadow: 0 1px 3px 0 rgba(0,0,0,.12);
@@ -673,20 +674,19 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    width: 110px;
-    height: 110px;
+    width: 140px;
+    height: 60px;
     background: #0042ab;
     color: #ffffff !important;
     font-family: 'Space Grotesk', sans-serif;
     font-size: 17px;
     font-weight: 600;
     text-decoration: none;
-    padding: 10px;
-    border-radius: 32px;
+    padding: 10px 20px;
+    border-radius: 999px;
     border: none;
     box-shadow: 0 4px 12px rgba(0,66,171,.35);
-    white-space: normal;
-    word-break: break-word;
+    white-space: nowrap;
     line-height: 1.3;
     text-transform: none;
     letter-spacing: 0;
@@ -742,16 +742,17 @@
   }
   .navbar-mobile-links a:hover { background: #0042ab; color: #fff; }
 
-  @media (max-width: 1024px) {
+  @media (max-width: 1280px) {
     .navbar-cta-col  { display: none; }
   }
   @media (max-width: 480px) {
-    .navbar-inner  { padding: 0 10px; height: 150px; align-items: center; }
-    .navbar-nav-col { width: 100%; padding: 0; flex: 1; min-width: 0; }
-    .navbar-nav-inner { padding: 0; align-items: center; }
-    .navbar-logo img { height: 110px !important; width: auto !important; }
-    .navbar-links    { display: none; }
-    .navbar-hamburger { display: flex; align-items: center; }
+    .navbar-inner     { padding: 0; height: 200px; align-items: center; position: relative; }
+    .navbar-nav-col   { width: 100%; padding: 0; flex: 1; min-width: 0; }
+    .navbar-nav-inner { padding: 0 50px 0 0; align-items: center; justify-content: center; position: relative; }
+    .navbar-logo      { margin-right: 0; }
+    .navbar-logo img  { width: 320px !important; height: auto !important; max-width: 80vw; }
+    .navbar-links     { display: none; }
+    .navbar-hamburger { display: flex; align-items: center; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 26px; }
   }
 </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
@@ -793,7 +794,7 @@
           <li><a href="https://ambassadorsbaseballus.com/home">Home</a></li>
           <li><a href="https://ambassadorsbaseballus.com/about-us">About</a></li>
           <li><a href="https://ambassadorsbaseballus.com/Our-Mission">Mission</a></li>
-          <li><a href="https://ambassadorsbaseballus.com/teams">Teams &amp; Tryouts</a></li>
+          <li><a href="https://team.ambassadorsbaseballus.com">Teams &amp; Tryouts</a></li>
           <li><a href="https://ambassadorsbaseballus.com/commitments">Commitments</a></li>
           <li><a href="https://ambassadorsbaseballus.com/opportunities">Opportunities</a></li>
           <li><a href="https://ambassadorsbaseballus.com/faq">FAQ</a></li>
@@ -819,7 +820,7 @@
     <li><a href="https://ambassadorsbaseballus.com/home"          onclick="closeMobileMenu()">Home</a></li>
     <li><a href="https://ambassadorsbaseballus.com/about-us"      onclick="closeMobileMenu()">About</a></li>
     <li><a href="https://ambassadorsbaseballus.com/Our-Mission"   onclick="closeMobileMenu()">Mission</a></li>
-    <li><a href="https://ambassadorsbaseballus.com/teams"         onclick="closeMobileMenu()">Teams &amp; Tryouts</a></li>
+    <li><a href="https://team.ambassadorsbaseballus.com"          onclick="closeMobileMenu()">Teams &amp; Tryouts</a></li>
     <li><a href="https://ambassadorsbaseballus.com/commitments"   onclick="closeMobileMenu()">Commitments</a></li>
     <li><a href="https://ambassadorsbaseballus.com/opportunities" onclick="closeMobileMenu()">Opportunities</a></li>
     <li><a href="https://ambassadorsbaseballus.com/faq"           onclick="closeMobileMenu()">FAQ</a></li>
@@ -827,7 +828,7 @@
   </ul>
 </div>
 
-
+<div class="page-wrap">
 
 <div class="steps-wrap">
   <div class="steps">
@@ -918,20 +919,6 @@
         <div id="team-error" style="display:none;color:#c8102e;font-size:.82rem;margin-top:.4rem;">Team not found. Please check your link.</div>
       </div>
 
-      <!-- Fee (always visible) -->
-      <div id="fee-display" style="margin-bottom:.3rem">
-        <div class="field">
-          <label>Player Fee Amount</label>
-          <div class="fee-box fee-box--empty fee-placeholder" id="fee-box" style="margin-top:.2rem">
-            <div>
-              <div class="fee-box-label" id="fee-label">Loading fee…</div>
-              <div class="fee-box-amount" id="fee-amount" style="font-size:1rem;opacity:.4;font-weight:400;letter-spacing:0">—</div>
-            </div>
-            <div class="fee-box-type" id="fee-type-badge" style="opacity:.3">—</div>
-          </div>
-        </div>
-      </div>
-
       <div class="ack-block">
         <div class="ack-text">I understand that player fees are <strong>non-refundable.</strong></div>
         <div class="radio-group">
@@ -949,24 +936,24 @@
       </div>
 
       <div class="ack-block">
-        <div class="ack-text">I understand and agree to the <strong>Player, Parent, Coach Contract</strong> (<a href="#" target="_blank">see here</a>).</div>
+        <div class="ack-text">I understand and agree to the <strong>Player, Parent, Coach Contract</strong> (<a href="https://assets.cdn.filesafe.space/Uk08wbmGq0zso8XE0luB/media/69d6486ba5d3efc6decc2808.pdf" target="_blank">see here</a>).</div>
         <div class="radio-group">
           <div class="radio-item"><input type="radio" name="ack3" id="ack3-yes" value="yes"><label for="ack3-yes">Yes</label></div>
           <div class="radio-item"><input type="radio" name="ack3" id="ack3-no"  value="no"><label  for="ack3-no">No</label></div>
         </div>
       </div>
 
-      <div class="sub-divider">Injury Protection Plan</div>
+      <div class="sub-divider" style="display:none">Injury Protection Plan</div>
 
-      <div class="ack-block">
-        <div class="ack-text">I would like to add <strong>Injury Protection</strong> (<a href="#" target="_blank">see here</a>).</div>
+      <div class="ack-block" style="display:none">
+        <div class="ack-text">I would like to add <strong>Injury Protection</strong> (<a href="https://assets.cdn.filesafe.space/Uk08wbmGq0zso8XE0luB/media/69d6486be033d6ce582fceba.pdf" target="_blank">see here</a>).</div>
         <div class="radio-group">
           <div class="radio-item"><input type="radio" name="ack4" id="ack4-yes" value="yes"><label for="ack4-yes">Yes</label></div>
           <div class="radio-item"><input type="radio" name="ack4" id="ack4-no"  value="no"><label  for="ack4-no">No</label></div>
         </div>
       </div>
 
-      <div class="ack-block">
+      <div class="ack-block" style="display:none">
         <div class="ack-text">I decline the Injury Protection Plan.</div>
         <div class="radio-group">
           <div class="radio-item"><input type="radio" name="ack5" id="ack5-yes" value="yes"><label for="ack5-yes">Yes</label></div>
@@ -987,6 +974,19 @@
     <div class="card">
       <div class="section-heading">Player Info</div>
 
+      <!-- Fee (always visible) -->
+      <div id="fee-display" style="margin-bottom:.3rem">
+      <div class="field">
+        <label>Player Fee Amount</label>
+        <div class="fee-box fee-box--empty fee-placeholder" id="fee-box" style="margin-top:.2rem">
+          <div>
+            <div class="fee-box-label" id="fee-label">Loading fee…</div>
+            <div class="fee-box-amount" id="fee-amount" style="font-size:1rem;opacity:.4;font-weight:400;letter-spacing:0">—</div>
+          </div>
+          <div class="fee-box-type" id="fee-type-badge" style="opacity:.3">—</div>
+        </div>
+      </div>
+      </div>
 
       <div class="field">
         <label>Player DOB <span class="req">★</span></label>
@@ -1096,6 +1096,7 @@
         <label>High School (current or will attend) <span class="req">★</span></label>
         <input type="text" id="high-school" placeholder="School name">
       </div>
+
     </div>
 
     <div class="err-msg" id="err-2"></div>
@@ -1139,15 +1140,27 @@
     </div>
   </div>
 
+
+  <!-- ══ THANK YOU (shown when any acknowledgement is answered "No") ══ -->
+  <div class="page" id="page-thankyou">
+    <div class="success-screen" style="display:block">
+      <h2>Thank You</h2>
+      <p>Please Contact Your Coach on This Matter</p>
+    </div>
+  </div>
+
 </div><!-- /main -->
 
-<script>
-const API_BASE = 'https://backend-baseball-inky.vercel.app';
+</div><!-- /page-wrap -->
 
-let selectedTeam     = null;
-let teamFinancials   = null;
-let createdPlayerId  = null;
-let createdPaymentId = null;
+<script>
+const API_BASE = 'https://web-production-6d13f4.up.railway.app';
+
+let selectedTeam       = null;
+let teamFinancials     = null;
+let installmentPreview = null;   // dynamic per-month data from /installment-preview
+let createdPlayerId    = null;
+let createdPaymentId   = null;
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 const v  = id => document.getElementById(id).value.trim();
@@ -1184,19 +1197,21 @@ let allTeams = [];
   try {
     const r = await fetch(`${API_BASE}/api/teams`);
     const d = await r.json();
-    allTeams = d.teams || [];
+    allTeams = Array.isArray(d) ? d : (Array.isArray(d?.teams) ? d.teams : []);
 
-    // Read team from path (/team-name), ?team= query param, or URL hash (fallbacks)
+    // Read team from URL path (/TeamName), ?team= query param, or hash fallback
     const params    = new URLSearchParams(window.location.search);
     const qParam    = params.get('team');
     const rawHash   = window.location.hash.slice(1);
-    const pathSlug  = window.location.pathname.replace(/^\//, '').trim();
-    const slug      = pathSlug
-                        ? decodeURIComponent(pathSlug)
-                        : (qParam ? decodeURIComponent(qParam) : (rawHash ? decodeURIComponent(rawHash) : ''));
+    const pathSlug  = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
+    const slug      = qParam
+      ? decodeURIComponent(qParam)
+      : pathSlug
+        ? decodeURIComponent(pathSlug)
+        : (rawHash ? decodeURIComponent(rawHash) : '');
 
     if (slug) {
-      const normalize = str => str.replace(/[-\s\/]+/g, '').toLowerCase();
+      const normalize = str => str.replace(/-/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
       const match = allTeams.find(t => normalize(t.teamName) === normalize(slug));
       if (match) {
         await selectTeam(match._id);
@@ -1219,11 +1234,16 @@ async function selectTeam(id) {
   document.getElementById('selected-team-badge').style.display = 'flex';
 
   try {
-    const r = await fetch(`${API_BASE}/api/teams/${id}/financials`);
-    const d = await r.json();
-    teamFinancials = d.financials;
+    const [finRes, previewRes] = await Promise.all([
+      fetch(`${API_BASE}/api/teams/${id}/financials`),
+      fetch(`${API_BASE}/api/teams/${id}/installment-preview`),
+    ]);
+    const finData     = await finRes.json();
+    const previewData = await previewRes.json();
+    teamFinancials     = finData.financials || null;
+    installmentPreview = previewData.enabled ? previewData : null;
     renderFee();
-  } catch(e) { teamFinancials = null; }
+  } catch(e) { teamFinancials = null; installmentPreview = null; }
 }
 
 function setFeePlaceholder() {
@@ -1253,16 +1273,21 @@ function renderFee() {
 
   const lbl = document.getElementById('fee-label');
 
+  lbl.style.display = 'none';
+
+  // Deposit always takes priority — if deposit + monthly are both on, show deposit only.
   if (deposit_enabled) {
-    lbl.style.display = 'none';
     amt.textContent   = `$${deposit_amount || 0}`;
     badge.textContent = 'Deposit';
+  } else if (monthly_payments && installmentPreview) {
+    const { perMonth, months } = installmentPreview;
+    amt.textContent   = `$${perMonth.toFixed(2)}/mo`;
+    badge.textContent = `${months} Month${months !== 1 ? 's' : ''}`;
   } else if (!monthly_payments) {
-    lbl.style.display = 'none';
     amt.textContent   = `$${player_fee || 0}`;
     badge.textContent = 'Full Payment';
   } else {
-    lbl.style.display = 'none';
+    // monthly_payments ON but preview not loaded — fallback
     amt.textContent   = `$${player_fee || 0}`;
     badge.textContent = 'Monthly';
   }
@@ -1299,10 +1324,27 @@ function goToPage2() {
   if (invalid) {
     return showErr('err-1', 'Please complete all required fields marked with ★ before continuing.');
   }
+
+  // Check acknowledgements — all 3 must be answered; any "No" shows thank-you screen
+  const ackNames = ['ack1', 'ack2', 'ack3'];
+  for (const name of ackNames) {
+    const checked = document.querySelector(`input[name="${name}"]:checked`);
+    if (!checked) {
+      return showErr('err-1', 'Please answer all acknowledgements before continuing.');
+    }
+    if (checked.value === 'no') {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-thankyou').classList.add('active');
+      document.querySelector('.steps-wrap').style.display = 'none';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+  }
+
   setPage(2);
 }
 
-function goToPage3() {
+async function goToPage3() {
   hideErr('err-2');
   const page = document.getElementById('page-2');
   clearErrors(page);
@@ -1313,17 +1355,71 @@ function goToPage3() {
   reqText.forEach(id => { if (!v(id)) { markError(id); invalid = true; } });
   reqSelect.forEach(id => { if (!vs(id)) { markError(id); invalid = true; } });
   ['bats','throws'].forEach(name => {
-    const inputs = document.querySelectorAll(`input[name="${name}"]`);
-    const field  = inputs[0]?.closest('.field');
-    if (!gr(name)) {
-      if (field) { field.classList.add('has-error'); }
-      invalid = true;
-    }
+    const field = document.querySelector(`input[name="${name}"]`)?.closest('.field');
+    if (!gr(name)) { if (field) field.classList.add('has-error'); invalid = true; }
   });
 
   if (invalid) return showErr('err-2', 'Please complete all required fields marked with ★ before continuing.');
-  buildPaymentPage();
-  setPage(3);
+
+  // Skip page 3 — go directly to checkout
+  const btn = document.querySelector('#page-2 .btn-primary');
+  btn.disabled = true;
+  btn.textContent = 'Processing…';
+
+  try {
+    const paymentId = await createRecords();
+
+    // No financials set up — show success directly (coach hasn't configured payments)
+    if (!teamFinancials) {
+      setPage(3);
+      document.getElementById('payment-card').style.display = 'none';
+      document.getElementById('success-screen').style.display = 'block';
+      return;
+    }
+
+    const origin = window.location.href.split('?')[0];
+
+    // Monthly payments only (no deposit) → Stripe installment subscription
+    if (teamFinancials.monthly_payments && !teamFinancials.deposit_enabled) {
+      const cr = await fetch(`${API_BASE}/api/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coachId:         selectedTeam._id,
+          paymentType:     'installment',
+          playerPaymentId: paymentId,
+          successUrl:      origin + '?payment=success',
+          cancelUrl:       origin + '?payment=cancelled',
+        }),
+      });
+      const cd = await cr.json();
+      if (!cr.ok) throw new Error(cd.message || 'Checkout failed.');
+      window.location.href = cd.url;
+      return;
+    }
+
+    // Deposit or full payment → redirect straight to Stripe checkout
+    const paymentType = teamFinancials.deposit_enabled ? 'deposit' : 'full';
+    const cr = await fetch(`${API_BASE}/api/checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        coachId:         selectedTeam._id,
+        paymentType,
+        playerPaymentId: paymentId,
+        successUrl:      origin + '?payment=success',
+        cancelUrl:       origin + '?payment=cancelled',
+      }),
+    });
+    const cd = await cr.json();
+    if (!cr.ok) throw new Error(cd.message || 'Checkout failed.');
+    window.location.href = cd.url;
+
+  } catch(err) {
+    showErr('err-2', err.message);
+    btn.disabled = false;
+    btn.textContent = 'Continue to Payment';
+  }
 }
 
 // ── PAYMENT PAGE ──────────────────────────────────────────────────────────
@@ -1340,15 +1436,24 @@ function buildPaymentPage() {
 
   const { player_fee, deposit_enabled, deposit_amount, monthly_payments } = teamFinancials;
 
+  // Deposit always takes priority — if deposit + monthly are both on, show deposit only.
   if (deposit_enabled) {
     document.getElementById('sum-fee').textContent = `$${deposit_amount} deposit (total fee: $${player_fee})`;
     el.innerHTML = `<button class="btn btn-primary" onclick="doSubmitAndPay('deposit')">Pay $${deposit_amount} Deposit</button>`;
-  } else if (!monthly_payments) {
+  } else if (monthly_payments) {
+    const preview = installmentPreview;
+    if (preview) {
+      const perMonth = preview.perMonth.toFixed(2);
+      const months   = preview.months;
+      document.getElementById('sum-fee').textContent = `$${perMonth}/mo × ${months} months = $${player_fee} total`;
+      el.innerHTML = `<button class="btn btn-primary" onclick="doSubmitAndPay('installment')">Start Monthly Payments — $${perMonth}/mo</button>`;
+    } else {
+      document.getElementById('sum-fee').textContent = `$${player_fee} total (monthly)`;
+      el.innerHTML = `<button class="btn btn-primary" onclick="doSubmitAndPay('installment')">Start Monthly Payments</button>`;
+    }
+  } else {
     document.getElementById('sum-fee').textContent = `$${player_fee}`;
     el.innerHTML = `<button class="btn btn-primary" onclick="doSubmitAndPay('full')">Pay $${player_fee} Now</button>`;
-  } else {
-    document.getElementById('sum-fee-row').style.display = 'none';
-    el.innerHTML = `<button class="btn btn-navy" onclick="doSubmit()">Complete Registration</button>`;
   }
 }
 
@@ -1490,7 +1595,7 @@ document.querySelectorAll('.ack-block input[type="radio"]').forEach(radio => {
     allowInput: false,
     onReady: function(selectedDates, dateStr, instance) {
       // Make year input easily editable
-      instance.calendarContainer.querySelector('.cur-year').removeAttribute('disabled');
+      instance.calendarContainer?.querySelector('.cur-year')?.removeAttribute('disabled');
     }
   });
 </script>
