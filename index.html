@@ -1161,6 +1161,7 @@ let teamFinancials     = null;
 let installmentPreview = null;   // dynamic per-month data from /installment-preview
 let createdPlayerId    = null;
 let createdPaymentId   = null;
+let createdPendingId   = null;   // set when registering for a team with a fee — Player/Payment are created by the webhook after successful payment
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 const v  = id => document.getElementById(id).value.trim();
@@ -1367,7 +1368,7 @@ async function goToPage3() {
   btn.textContent = 'Processing…';
 
   try {
-    const paymentId = await createRecords();
+    const ids = await createRecords();
 
     // No financials set up — show success directly (coach hasn't configured payments)
     if (!teamFinancials) {
@@ -1379,17 +1380,22 @@ async function goToPage3() {
 
     const origin = window.location.href.split('?')[0];
 
+    // Build the checkout body — paid flow has pendingId, free has playerPaymentId.
+    const idField = ids.pendingId
+      ? { pendingId: ids.pendingId }
+      : { playerPaymentId: ids.paymentId };
+
     // Monthly payments only (no deposit) → Stripe installment subscription
     if (teamFinancials.monthly_payments && !teamFinancials.deposit_enabled) {
       const cr = await fetch(`${API_BASE}/api/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          coachId:         selectedTeam._id,
-          paymentType:     'installment',
-          playerPaymentId: paymentId,
-          successUrl:      origin + '?payment=success',
-          cancelUrl:       origin + '?payment=cancelled',
+          coachId:     selectedTeam._id,
+          paymentType: 'installment',
+          ...idField,
+          successUrl:  origin + '?payment=success',
+          cancelUrl:   origin + '?payment=cancelled',
         }),
       });
       const cd = await cr.json();
@@ -1404,11 +1410,11 @@ async function goToPage3() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        coachId:         selectedTeam._id,
+        coachId:     selectedTeam._id,
         paymentType,
-        playerPaymentId: paymentId,
-        successUrl:      origin + '?payment=success',
-        cancelUrl:       origin + '?payment=cancelled',
+        ...idField,
+        successUrl:  origin + '?payment=success',
+        cancelUrl:   origin + '?payment=cancelled',
       }),
     });
     const cd = await cr.json();
@@ -1458,45 +1464,85 @@ function buildPaymentPage() {
 }
 
 // ── API ───────────────────────────────────────────────────────────────────
+// Two registration flows live here, selected by whether the team has a fee:
+//
+//   PAID flow  → POST /api/registrations/pending. Nothing is written to the
+//                Player or PlayerPayment collections, and nothing is pushed
+//                to GHL. The Stripe webhook does that ONLY after the parent
+//                successfully completes checkout. Abandoned pendings expire
+//                automatically via a 24h TTL.
+//
+//   FREE flow  → POST /api/teams/:id/roster + POST /api/coach/player-payments
+//                immediately, same as before. There is no payment to wait
+//                for, so we materialize on submit.
+//
+// `createRecords` returns { pendingId } for paid flow or
+// { paymentId } for free flow. Callers branch on which is set.
+function _registrationPayload() {
+  return {
+    name:        v('player-name'),
+    jersey:      v('jersey-1'),
+    jersey2:     v('jersey-2'),
+    gradYear:    vs('grad-year'),
+    position:    vs('pos-1'),
+    pos2:        vs('pos-2'),
+    hw:          v('hw'),
+    city:        v('addr-city'),
+    state:       v('addr-state'),
+    address:     v('addr-street'),
+    zip:         v('addr-zip'),
+    email:       v('player-email'),
+    cell:        v('player-cell'),
+    dob:         v('player-dob'),
+    bats:        gr('bats'),
+    throws:      gr('throws'),
+    highSchool:  v('high-school'),
+    motherFirst: v('mother-first'),
+    motherLast:  v('mother-last'),
+    motherCell:  v('mother-cell'),
+    motherEmail: v('mother-email'),
+    fatherFirst: v('father-first'),
+    fatherLast:  v('father-last'),
+    fatherCell:  v('father-cell'),
+    fatherEmail: v('father-email'),
+    teamName:    selectedTeam?.teamName || '',
+  };
+}
+
 async function createRecords() {
+  const fee   = teamFinancials?.player_fee     || 0;
+  const dep   = teamFinancials?.deposit_amount || 0;
+  const isPaid = !!teamFinancials && fee > 0;
+
+  // ── PAID FLOW: stash in PendingRegistration only ────────────────────────
+  if (isPaid) {
+    const pr = await fetch(`${API_BASE}/api/registrations/pending`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        coachId:         selectedTeam._id,
+        ..._registrationPayload(),
+        totalFee:        fee,
+        depositAmount:   dep,
+        registeredDate:  new Date().toISOString().split('T')[0],
+        paymentDeadline: teamFinancials?.payment_deadline || '',
+      }),
+    });
+    const pd = await pr.json();
+    if (!pr.ok) throw new Error(pd.message || 'Failed to save registration.');
+    createdPendingId = pd.pendingId;
+    return { pendingId: createdPendingId };
+  }
+
+  // ── FREE FLOW: original behavior, materialize immediately ───────────────
   const pr = await fetch(`${API_BASE}/api/teams/${selectedTeam._id}/roster`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name:        v('player-name'),
-      jersey:      v('jersey-1'),
-      jersey2:     v('jersey-2'),
-      gradYear:    vs('grad-year'),
-      position:    vs('pos-1'),
-      pos2:        vs('pos-2'),
-      hw:          v('hw'),
-      city:        v('addr-city'),
-      state:       v('addr-state'),
-      address:     v('addr-street'),
-      zip:         v('addr-zip'),
-      email:       v('player-email'),
-      cell:        v('player-cell'),
-      dob:         v('player-dob'),
-      bats:        gr('bats'),
-      throws:      gr('throws'),
-      highSchool:  v('high-school'),
-      motherFirst: v('mother-first'),
-      motherLast:  v('mother-last'),
-      motherCell:  v('mother-cell'),
-      motherEmail: v('mother-email'),
-      fatherFirst: v('father-first'),
-      fatherLast:  v('father-last'),
-      fatherCell:  v('father-cell'),
-      fatherEmail: v('father-email'),
-      teamName:    selectedTeam?.teamName || '',
-    }),
+    body: JSON.stringify(_registrationPayload()),
   });
   const pd = await pr.json();
   if (!pr.ok) throw new Error(pd.message || 'Failed to save player.');
   createdPlayerId = pd.player?._id;
-
-  const fee = teamFinancials?.player_fee || 0;
-  const dep = teamFinancials?.deposit_amount || 0;
 
   const pymr = await fetch(`${API_BASE}/api/coach/player-payments`, {
     method: 'POST',
@@ -1515,7 +1561,7 @@ async function createRecords() {
   const pymd = await pymr.json();
   if (!pymr.ok) throw new Error(pymd.message || 'Failed to create payment record.');
   createdPaymentId = pymd.payment?._id;
-  return createdPaymentId;
+  return { paymentId: createdPaymentId };
 }
 
 async function doSubmit() {
@@ -1523,6 +1569,8 @@ async function doSubmit() {
   btn.disabled = true; btn.textContent = 'Submitting…';
   hideErr('err-3');
   try {
+    // Free flow only — doSubmit is reached when teamFinancials is null or there
+    // is no fee. createRecords returns { paymentId } in this case.
     await createRecords();
     document.getElementById('payment-card').style.display = 'none';
     document.getElementById('success-screen').style.display = 'block';
@@ -1537,17 +1585,23 @@ async function doSubmitAndPay(paymentType) {
   btn.disabled = true; btn.textContent = 'Processing…';
   hideErr('err-3');
   try {
-    const paymentId = await createRecords();
+    const ids = await createRecords();
+    // Paid flow returns pendingId; if for some reason a free flow lands here
+    // (shouldn't), fall back to playerPaymentId.
+    const idField = ids.pendingId
+      ? { pendingId: ids.pendingId }
+      : { playerPaymentId: ids.paymentId };
+
     const origin = window.location.href.split('?')[0];
     const cr = await fetch(`${API_BASE}/api/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        coachId:         selectedTeam._id,
+        coachId:    selectedTeam._id,
         paymentType,
-        playerPaymentId: paymentId,
-        successUrl:      origin + '?payment=success',
-        cancelUrl:       origin + '?payment=cancelled',
+        ...idField,
+        successUrl: origin + '?payment=success',
+        cancelUrl:  origin + '?payment=cancelled',
       }),
     });
     const cd = await cr.json();
