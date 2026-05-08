@@ -1367,9 +1367,7 @@ async function goToPage3() {
   btn.textContent = 'Processing…';
 
   try {
-    const paymentId = await createRecords();
-
-    // No financials set up — show success directly (coach hasn't configured payments)
+    // No financials set up — show success directly (coach hasn't configured payments yet)
     if (!teamFinancials) {
       setPage(3);
       document.getElementById('payment-card').style.display = 'none';
@@ -1377,6 +1375,9 @@ async function goToPage3() {
       return;
     }
 
+    // Stash the form in PendingRegistration; Player + PlayerPayment are
+    // created by the webhook only after Stripe confirms payment.
+    const pendingId = await createPending();
     const origin = window.location.href.split('?')[0];
 
     // Monthly payments only (no deposit) → Stripe installment subscription
@@ -1385,11 +1386,11 @@ async function goToPage3() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          coachId:         selectedTeam._id,
-          paymentType:     'installment',
-          playerPaymentId: paymentId,
-          successUrl:      origin + '?payment=success',
-          cancelUrl:       origin + '?payment=cancelled',
+          coachId:     selectedTeam._id,
+          paymentType: 'installment',
+          pendingId,
+          successUrl:  origin + '?payment=success',
+          cancelUrl:   origin + '?payment=cancelled',
         }),
       });
       const cd = await cr.json();
@@ -1404,11 +1405,11 @@ async function goToPage3() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        coachId:         selectedTeam._id,
+        coachId:     selectedTeam._id,
         paymentType,
-        playerPaymentId: paymentId,
-        successUrl:      origin + '?payment=success',
-        cancelUrl:       origin + '?payment=cancelled',
+        pendingId,
+        successUrl:  origin + '?payment=success',
+        cancelUrl:   origin + '?payment=cancelled',
       }),
     });
     const cd = await cr.json();
@@ -1458,64 +1459,53 @@ function buildPaymentPage() {
 }
 
 // ── API ───────────────────────────────────────────────────────────────────
-async function createRecords() {
-  const pr = await fetch(`${API_BASE}/api/teams/${selectedTeam._id}/roster`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name:        v('player-name'),
-      jersey:      v('jersey-1'),
-      jersey2:     v('jersey-2'),
-      gradYear:    vs('grad-year'),
-      position:    vs('pos-1'),
-      pos2:        vs('pos-2'),
-      hw:          v('hw'),
-      city:        v('addr-city'),
-      state:       v('addr-state'),
-      address:     v('addr-street'),
-      zip:         v('addr-zip'),
-      email:       v('player-email'),
-      cell:        v('player-cell'),
-      dob:         v('player-dob'),
-      bats:        gr('bats'),
-      throws:      gr('throws'),
-      highSchool:  v('high-school'),
-      motherFirst: v('mother-first'),
-      motherLast:  v('mother-last'),
-      motherCell:  v('mother-cell'),
-      motherEmail: v('mother-email'),
-      fatherFirst: v('father-first'),
-      fatherLast:  v('father-last'),
-      fatherCell:  v('father-cell'),
-      fatherEmail: v('father-email'),
-      teamName:    selectedTeam?.teamName || '',
-    }),
-  });
-  const pd = await pr.json();
-  if (!pr.ok) throw new Error(pd.message || 'Failed to save player.');
-  createdPlayerId = pd.player?._id;
-
-  const fee = teamFinancials?.player_fee || 0;
+// Pre-payment flow: stash form data in PendingRegistration.
+// Player + PlayerPayment are materialized by the Stripe webhook after payment succeeds.
+async function createPending() {
+  const fee = teamFinancials?.player_fee     || 0;
   const dep = teamFinancials?.deposit_amount || 0;
 
-  const pymr = await fetch(`${API_BASE}/api/coach/player-payments`, {
+  const res = await fetch(`${API_BASE}/api/registrations/pending`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       coachId:         selectedTeam._id,
-      playerId:        createdPlayerId,
-      playerName:      v('player-name'),
+      name:            v('player-name'),
+      jersey:          v('jersey-1'),
+      jersey2:         v('jersey-2'),
+      gradYear:        vs('grad-year'),
+      position:        vs('pos-1'),
+      pos2:            vs('pos-2'),
+      hw:              v('hw'),
+      city:            v('addr-city'),
+      state:           v('addr-state'),
+      address:         v('addr-street'),
+      zip:             v('addr-zip'),
+      email:           v('player-email'),
+      cell:            v('player-cell'),
+      dob:             v('player-dob'),
+      bats:            gr('bats'),
+      throws:          gr('throws'),
+      highSchool:      v('high-school'),
+      motherFirst:     v('mother-first'),
+      motherLast:      v('mother-last'),
+      motherCell:      v('mother-cell'),
+      motherEmail:     v('mother-email'),
+      fatherFirst:     v('father-first'),
+      fatherLast:      v('father-last'),
+      fatherCell:      v('father-cell'),
+      fatherEmail:     v('father-email'),
+      teamName:        selectedTeam?.teamName || '',
       totalFee:        fee,
       depositAmount:   dep,
-      balance:         fee,
-      registeredDate:  new Date().toISOString().split('T')[0],
+      paymentPlan:     teamFinancials?.payment_plan     || [],
       paymentDeadline: teamFinancials?.payment_deadline || '',
+      registeredDate:  new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
     }),
   });
-  const pymd = await pymr.json();
-  if (!pymr.ok) throw new Error(pymd.message || 'Failed to create payment record.');
-  createdPaymentId = pymd.payment?._id;
-  return createdPaymentId;
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to save registration.');
+  return data.pendingId;
 }
 
 async function doSubmit() {
@@ -1523,7 +1513,7 @@ async function doSubmit() {
   btn.disabled = true; btn.textContent = 'Submitting…';
   hideErr('err-3');
   try {
-    await createRecords();
+    await createPending();
     document.getElementById('payment-card').style.display = 'none';
     document.getElementById('success-screen').style.display = 'block';
   } catch(err) {
@@ -1537,17 +1527,17 @@ async function doSubmitAndPay(paymentType) {
   btn.disabled = true; btn.textContent = 'Processing…';
   hideErr('err-3');
   try {
-    const paymentId = await createRecords();
+    const pendingId = await createPending();
     const origin = window.location.href.split('?')[0];
     const cr = await fetch(`${API_BASE}/api/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        coachId:         selectedTeam._id,
+        coachId:     selectedTeam._id,
         paymentType,
-        playerPaymentId: paymentId,
-        successUrl:      origin + '?payment=success',
-        cancelUrl:       origin + '?payment=cancelled',
+        pendingId,
+        successUrl:  origin + '?payment=success',
+        cancelUrl:   origin + '?payment=cancelled',
       }),
     });
     const cd = await cr.json();
