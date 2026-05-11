@@ -1159,8 +1159,9 @@ const API_BASE = 'https://zealand-exciting-threshold-filme.trycloudflare.com';
 let selectedTeam       = null;
 let teamFinancials     = null;
 let installmentPreview = null;   // dynamic per-month data from /installment-preview
-let createdPlayerId    = null;
-let createdPaymentId   = null;
+let createdPlayerId    = null;   // only used by the free-registration path
+let createdPaymentId   = null;   // only used by the free-registration path
+let createdPendingId   = null;   // used by the paid path — the webhook materializes the real records after Stripe
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 const v  = id => document.getElementById(id).value.trim();
@@ -1367,17 +1368,23 @@ async function goToPage3() {
   btn.textContent = 'Processing…';
 
   try {
-    const paymentId = await createRecords();
-
-    // No financials set up — show success directly (coach hasn't configured payments)
+    // ── FREE flow (no financials configured) ─────────────────────────────
+    // No checkout will happen, so create real Player + PlayerPayment records
+    // directly and show the success screen. There's no webhook to materialize
+    // anything later — the registration ends here.
     if (!teamFinancials) {
+      await createRecords();
       setPage(3);
       document.getElementById('payment-card').style.display = 'none';
       document.getElementById('success-screen').style.display = 'block';
       return;
     }
 
-    const origin = window.location.href.split('?')[0];
+    // ── PAID flow ────────────────────────────────────────────────────────
+    // Stash the form into a pending registration; Stripe webhook will
+    // materialize Player + PlayerPayment + GHL push only on successful payment.
+    const pendingId = await createPendingRegistration();
+    const origin    = window.location.href.split('?')[0];
 
     // Monthly payments only (no deposit) → Stripe installment subscription
     if (teamFinancials.monthly_payments && !teamFinancials.deposit_enabled) {
@@ -1385,11 +1392,11 @@ async function goToPage3() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          coachId:         selectedTeam._id,
-          paymentType:     'installment',
-          playerPaymentId: paymentId,
-          successUrl:      origin + '?payment=success',
-          cancelUrl:       origin + '?payment=cancelled',
+          coachId:     selectedTeam._id,
+          paymentType: 'installment',
+          pendingId,
+          successUrl:  origin + '?payment=success',
+          cancelUrl:   origin + '?payment=cancelled',
         }),
       });
       const cd = await cr.json();
@@ -1404,11 +1411,11 @@ async function goToPage3() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        coachId:         selectedTeam._id,
+        coachId:     selectedTeam._id,
         paymentType,
-        playerPaymentId: paymentId,
-        successUrl:      origin + '?payment=success',
-        cancelUrl:       origin + '?payment=cancelled',
+        pendingId,
+        successUrl:  origin + '?payment=success',
+        cancelUrl:   origin + '?payment=cancelled',
       }),
     });
     const cd = await cr.json();
@@ -1518,6 +1525,59 @@ async function createRecords() {
   return createdPaymentId;
 }
 
+// ── PENDING REGISTRATION (paid flow) ──────────────────────────────────────
+// Stashes the form payload server-side. The webhook materializes the real
+// Player + PlayerPayment + GHL push after Stripe checkout succeeds.
+// Returns a pendingId that's passed to /api/checkout in place of playerPaymentId.
+async function createPendingRegistration() {
+  const fee = teamFinancials?.player_fee     || 0;
+  const dep = teamFinancials?.deposit_amount || 0;
+
+  const pr = await fetch(`${API_BASE}/api/registrations/pending`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      coachId:     selectedTeam._id,
+      // Player payload — same fields as the old roster endpoint
+      name:        v('player-name'),
+      jersey:      v('jersey-1'),
+      jersey2:     v('jersey-2'),
+      gradYear:    vs('grad-year'),
+      position:    vs('pos-1'),
+      pos2:        vs('pos-2'),
+      hw:          v('hw'),
+      city:        v('addr-city'),
+      state:       v('addr-state'),
+      address:     v('addr-street'),
+      zip:         v('addr-zip'),
+      email:       v('player-email'),
+      cell:        v('player-cell'),
+      dob:         v('player-dob'),
+      bats:        gr('bats'),
+      throws:      gr('throws'),
+      highSchool:  v('high-school'),
+      motherFirst: v('mother-first'),
+      motherLast:  v('mother-last'),
+      motherCell:  v('mother-cell'),
+      motherEmail: v('mother-email'),
+      fatherFirst: v('father-first'),
+      fatherLast:  v('father-last'),
+      fatherCell:  v('father-cell'),
+      fatherEmail: v('father-email'),
+      teamName:    selectedTeam?.teamName || '',
+      // Payment snapshot — captured at submit time
+      totalFee:        fee,
+      depositAmount:   dep,
+      paymentDeadline: teamFinancials?.payment_deadline || '',
+      registeredDate:  new Date().toISOString().split('T')[0],
+    }),
+  });
+  const pd = await pr.json();
+  if (!pr.ok) throw new Error(pd.message || 'Failed to start registration.');
+  createdPendingId = pd.pendingId;
+  return createdPendingId;
+}
+
 async function doSubmit() {
   const btn = document.querySelector('#payment-action button');
   btn.disabled = true; btn.textContent = 'Submitting…';
@@ -1537,17 +1597,17 @@ async function doSubmitAndPay(paymentType) {
   btn.disabled = true; btn.textContent = 'Processing…';
   hideErr('err-3');
   try {
-    const paymentId = await createRecords();
+    const pendingId = await createPendingRegistration();
     const origin = window.location.href.split('?')[0];
     const cr = await fetch(`${API_BASE}/api/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        coachId:         selectedTeam._id,
+        coachId:     selectedTeam._id,
         paymentType,
-        playerPaymentId: paymentId,
-        successUrl:      origin + '?payment=success',
-        cancelUrl:       origin + '?payment=cancelled',
+        pendingId,
+        successUrl:  origin + '?payment=success',
+        cancelUrl:   origin + '?payment=cancelled',
       }),
     });
     const cd = await cr.json();
